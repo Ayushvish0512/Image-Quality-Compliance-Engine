@@ -1,0 +1,287 @@
+Mission
+
+Your only objective is to deliver a working Version 1 of the Vision Compliance Engine.
+
+Do not optimize.
+Do not redesign.
+Do not add extra features.
+
+A finished imperfect system is preferred over an unfinished perfect system.
+
+Core Principles
+Rule 1 — Finish Before Improving
+
+Never replace a working module with a "better" one unless the current module completely fails.
+
+Working > Perfect
+
+Rule 2 — One Feature at a Time
+
+Never work on multiple modules simultaneously.
+
+Complete modules in this exact order:
+
+API Skeleton
+Image Upload
+Face Detection
+Person Detection
+Blur Detection
+Lighting Detection
+Face Visibility
+Face Distance
+Face Orientation
+Shirt Detection
+Cap Detection
+Screenshot Risk
+Compliance Score
+API Response
+Documentation
+Testing
+
+A module is considered complete only when:
+
+code works
+tests pass
+documented
+committed
+
+Only then continue.
+
+Rule 3 — Never Rewrite
+
+If an existing implementation satisfies the PRD:
+
+STOP.
+
+Do not replace it.
+
+Do not search for alternatives.
+
+Do not benchmark.
+
+Move to the next module.
+
+Rule 4 — Use Existing Models
+
+Never train a new model unless explicitly instructed.
+
+Prefer:
+
+MediaPipe
+OpenCV
+YOLO Nano
+ONNX models
+Hugging Face pretrained models
+
+Training custom AI is Phase 2.
+
+Rule 5 — CPU First
+
+Everything must run on CPU.
+
+Never introduce GPU dependencies.
+
+Rule 6 — Respect Memory Budget
+
+Target:
+
+250 MB RAM
+
+Absolute limit:
+
+350 MB RAM
+
+If multiple solutions exist:
+
+Choose the smaller one.
+
+Rule 7 — Configuration Over Code
+
+Anything business-related must live in YAML.
+
+Never hardcode:
+
+shirt colors
+cap colors
+accessory list
+thresholds
+scoring weights
+Rule 8 — Never Block Progress
+
+If one module becomes difficult:
+
+Create a TODO.
+
+Implement a reasonable fallback.
+
+Continue.
+
+Never stop the project because one feature is imperfect.
+
+Rule 9 — Small Commits
+
+After every completed module:
+
+update README
+update changelog
+commit
+
+Never allow more than one unfinished module.
+
+Rule 10 — No Scope Creep
+
+Ignore ideas including:
+
+face recognition
+liveness detection
+identity verification
+Android
+dashboard
+ERP integration
+database
+admin panel
+model training
+cloud optimization
+
+These belong to later phases.
+
+Development Workflow
+
+For every module:
+
+Step 1
+
+Understand requirement
+
+↓
+
+Step 2
+
+Search existing implementation
+
+↓
+
+Step 3
+
+Choose smallest reliable solution
+
+↓
+
+Step 4
+
+Implement
+
+↓
+
+Step 5
+
+Test
+
+↓
+
+Step 6
+
+Document
+
+↓
+
+Step 7
+
+Commit
+
+↓
+
+Step 8
+
+Move to next module
+
+Never revisit completed modules unless a bug prevents progress.
+
+Decision Priority
+
+When choosing between two solutions:
+
+Correctness
+Reliability
+Memory usage
+Simplicity
+Speed
+
+Latency is not a priority.
+
+Repository Structure
+vision-compliance-engine/
+│
+├── app/
+├── detectors/
+├── scoring/
+├── config/
+├── models/
+├── utils/
+├── tests/
+├── docs/
+├── README.md
+├── CHANGELOG.md
+└── requirements.txt
+Definition of Done
+
+A feature is DONE only if:
+
+Works correctly.
+Has unit tests (where practical).
+Returns expected JSON.
+Added to README.
+Configurable if applicable.
+Memory impact verified.
+No known blocking bugs.
+
+Otherwise:
+
+It is NOT DONE.
+
+Progress Tracking
+
+Maintain a PROGRESS.md file with this checklist:
+
+# Vision Compliance Engine Progress
+
+- [ ] Project Setup
+- [ ] FastAPI
+- [ ] Upload API
+- [ ] Face Detection
+- [ ] Person Detection
+- [ ] Blur Detection
+- [ ] Lighting Detection
+- [ ] Face Visibility
+- [ ] Face Distance
+- [ ] Face Orientation
+- [ ] Shirt Detection
+- [ ] Cap Detection
+- [ ] Screenshot Risk
+- [ ] Compliance Score
+- [ ] JSON Response
+- [ ] Configuration System
+- [ ] Documentation
+- [ ] Final Testing
+- [ ] Version 1 Release
+
+Never mark a task complete until it is fully implemented and verified.
+
+Communication Rules
+
+When reporting progress:
+
+Report only completed work.
+If blocked, explain the blocker and propose the smallest workaround.
+Avoid speculative redesigns or introducing new technologies unless they are required to satisfy the PRD.
+At the end of each work session, state:
+What was completed.
+What remains.
+The single next task to implement.
+One Rule I'd Add Specifically for You
+
+This is based on the pattern I've seen across your ERP, POS, and AI projects:
+
+If a new idea is not required to complete Version 1, write it into BACKLOG.md and continue coding. Do not implement it immediately.
+
+make one module and test it if its working or not then move to next

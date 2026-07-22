@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Project Planning (tracked separately)
+TODO.md
+TESTING.md
+
+# Project Specific - Config
+config/*.yaml
+!config/default.yaml
+
+# Logs
+*.log
+logs/
+
+# Uploads / Temp
+uploads/
+temp/
+tmp/
+
+# Testing / Reports
+htmlcov/
+.coverage
+coverage.xml
+.pytest_cache/
+test_reports/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# ML Models (too large for repo)
+models/*.onnx
+models/*.pb
+models/*.h5
+models/*.pth
+!models/.gitkeep
+
+# Images / Data
+sample_images/
+datasets/
+*.jpg
+*.jpeg
+*.png
+*.webp
+!static/sample/*.md
+

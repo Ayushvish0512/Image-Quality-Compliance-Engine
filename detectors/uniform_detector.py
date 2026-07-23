@@ -7,6 +7,8 @@ Steps:
   3. Match against allowed colors from config
 """
 
+from pathlib import Path
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -20,6 +22,11 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 mp_image = mp.Image
 ImageFormat = mp.ImageFormat
 
+# -- Model paths --
+_DETECTOR_DIR = Path(__file__).resolve().parent
+_MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
+_POSE_LANDMARKER_MODEL = str(_MODELS_DIR / "pose_landmarker_lite.task")
+
 _pose_landmarker = None
 
 
@@ -27,9 +34,9 @@ def _get_pose_landmarker():
     global _pose_landmarker
     if _pose_landmarker is None:
         options = PoseLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_POSE_LANDMARKER_MODEL),
             running_mode=VisionRunningMode.IMAGE,
-            min_detection_confidence=0.6,
+            min_pose_detection_confidence=0.6,
         )
         _pose_landmarker = PoseLandmarker.create_from_options(options)
     return _pose_landmarker

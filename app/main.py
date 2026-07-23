@@ -47,7 +47,7 @@ app = FastAPI(
 )
 
 # ── Constants ──────────────────────────────────────────────────────────────
-ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "avif"}
 MAX_FILE_SIZE = 10 * 1024 * 1024      # 10 MB
 REQUEST_TIMEOUT = 15                  # seconds
 

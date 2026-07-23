@@ -17,7 +17,9 @@ Execution Order (some parallelizable, some sequential due to dependencies):
   Step 11: Compliance Score (aggregates all results)
 """
 
+import json
 import logging
+
 import numpy as np
 
 from detectors.face_detector import detect_face
@@ -31,6 +33,23 @@ from detectors.cap_detector import detect_cap
 from detectors.accessory_detector import detect_accessories
 from detectors.screenshot_detector import analyze_screenshot_risk
 from scoring.compliance_score import compute_compliance, DEFAULT_WEIGHTS
+
+
+def _sanitize(obj):
+    """Convert numpy types to native Python types for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +175,7 @@ def run_pipeline(image: np.ndarray, image_bytes: bytes = None) -> dict:
         "score_breakdown": compliance["breakdown"],
     }
 
-    return response
+    return _sanitize(response)
 
 
 def _generate_recommendations(compliance: dict, raw_results: dict) -> list:

@@ -72,3 +72,5 @@ datasets/
 *.webp
 !static/sample/*.md
 .env.example
+error.txt
+request.json

@@ -4,6 +4,8 @@ Uses MediaPipe FaceLandmarker (tasks.vision API) landmarks to compute yaw, pitch
 Returns: orientation (Front/Left/Right/Up/Down), yaw, pitch, roll angles.
 """
 
+from pathlib import Path
+
 import mediapipe as mp
 import numpy as np
 
@@ -14,6 +16,11 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 mp_image = mp.Image
 ImageFormat = mp.ImageFormat
 
+# -- Model paths --
+_DETECTOR_DIR = Path(__file__).resolve().parent
+_MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
+_FACE_LANDMARKER_MODEL = str(_MODELS_DIR / "face_landmarker.task")
+
 _face_landmarker = None
 
 
@@ -21,9 +28,9 @@ def _get_landmarker():
     global _face_landmarker
     if _face_landmarker is None:
         options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_FACE_LANDMARKER_MODEL),
             running_mode=VisionRunningMode.IMAGE,
-            min_detection_confidence=0.5,
+            min_face_detection_confidence=0.5,
             num_faces=1,
         )
         _face_landmarker = FaceLandmarker.create_from_options(options)

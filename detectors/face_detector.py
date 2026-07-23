@@ -4,6 +4,9 @@ Uses MediaPipe FaceDetector + FaceLandmarker (tasks.vision API).
 Returns: detected flag, confidence, visibility score (0-100), and facial landmarks.
 """
 
+import os
+from pathlib import Path
+
 import mediapipe as mp
 import numpy as np
 
@@ -15,6 +18,12 @@ FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
 VisionRunningMode = mp.tasks.vision.RunningMode
 mp_image = mp.Image
 
+# -- Model paths --
+_DETECTOR_DIR = Path(__file__).resolve().parent
+_MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
+_FACE_DETECTOR_MODEL = str(_MODELS_DIR / "blaze_face_short_range.tflite")
+_FACE_LANDMARKER_MODEL = str(_MODELS_DIR / "face_landmarker.task")
+
 _face_detector = None
 _face_landmarker = None
 
@@ -23,7 +32,7 @@ def _get_face_detector():
     global _face_detector
     if _face_detector is None:
         options = FaceDetectorOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_FACE_DETECTOR_MODEL),
             running_mode=VisionRunningMode.IMAGE,
             min_detection_confidence=0.5,
         )
@@ -35,9 +44,9 @@ def _get_face_landmarker():
     global _face_landmarker
     if _face_landmarker is None:
         options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_FACE_LANDMARKER_MODEL),
             running_mode=VisionRunningMode.IMAGE,
-            min_detection_confidence=0.5,
+            min_face_detection_confidence=0.5,
             num_faces=1,
         )
         _face_landmarker = FaceLandmarker.create_from_options(options)
@@ -71,7 +80,8 @@ def detect_face(image: np.ndarray) -> dict:
         }
 
     detection = detection_result.detections[0]
-    confidence = round(detection.score * 100, 1)
+    # MediaPipe tasks API: Detection.categories[0].score
+    confidence = round(detection.categories[0].score * 100, 1)
 
     # Bounding box
     bbox = detection.bounding_box

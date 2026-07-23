@@ -4,6 +4,8 @@ Counts persons in the image using MediaPipe PoseLandmarker + FaceDetector (CPU).
 Returns: count, classification (No Person / One Person / Multiple Persons)
 """
 
+from pathlib import Path
+
 import mediapipe as mp
 import numpy as np
 
@@ -16,6 +18,12 @@ VisionRunningMode = mp.tasks.vision.RunningMode
 mp_image = mp.Image
 ImageFormat = mp.ImageFormat
 
+# -- Model paths --
+_DETECTOR_DIR = Path(__file__).resolve().parent
+_MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
+_FACE_DETECTOR_MODEL = str(_MODELS_DIR / "blaze_face_short_range.tflite")
+_POSE_LANDMARKER_MODEL = str(_MODELS_DIR / "pose_landmarker_lite.task")
+
 _face_detector = None
 _pose_landmarker = None
 
@@ -24,7 +32,7 @@ def _get_face_detector():
     global _face_detector
     if _face_detector is None:
         options = FaceDetectorOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_FACE_DETECTOR_MODEL),
             running_mode=VisionRunningMode.IMAGE,
             min_detection_confidence=0.5,
         )
@@ -36,9 +44,9 @@ def _get_pose_landmarker():
     global _pose_landmarker
     if _pose_landmarker is None:
         options = PoseLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=None),
+            base_options=BaseOptions(model_asset_path=_POSE_LANDMARKER_MODEL),
             running_mode=VisionRunningMode.IMAGE,
-            min_detection_confidence=0.5,
+            min_pose_detection_confidence=0.5,
         )
         _pose_landmarker = PoseLandmarker.create_from_options(options)
     return _pose_landmarker

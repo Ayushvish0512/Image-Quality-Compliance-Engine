@@ -1,0 +1,49 @@
+# BBIPL Vision Compliance Engine - Business Rules Configuration
+# Modify this file to update business rules without changing code
+
+uniform:
+  tshirt_required: true
+  tshirt_colors:
+    - Blue
+    - Orange
+    - Black
+  confidence_threshold: 70
+
+cap:
+  required: true
+  colors:
+    - Blue
+    - Black
+
+gloves:
+  required: false
+  enabled: true
+
+apron:
+  required: false
+  enabled: true
+
+mask:
+  required: false
+  enabled: true
+
+hairnet:
+  required: false
+  enabled: false
+
+id_card:
+  required: false
+  enabled: true
+
+jacket:
+  required: false
+  enabled: false
+
+# Detection thresholds
+minimum_face_size: 30         # % of frame
+maximum_face_size: 70         # % of frame
+minimum_blur_score: 60        # 0-100
+minimum_visibility: 75        # 0-100
+minimum_brightness: 50        # 0-100
+minimum_overall_score: 80     # Overall compliance pass threshold
+

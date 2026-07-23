@@ -32,10 +32,6 @@ ENV/
 TODO.md
 TESTING.md
 
-# Project Specific - Config
-config/*.yaml
-!config/default.yaml
-
 # Logs
 *.log
 logs/
@@ -75,4 +71,4 @@ datasets/
 *.png
 *.webp
 !static/sample/*.md
-
+.env.example

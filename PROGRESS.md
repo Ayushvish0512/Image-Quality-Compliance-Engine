@@ -2,21 +2,20 @@
 
 - [x] Project Setup
 - [x] FastAPI
-- [ ] Upload API
-- [ ] Face Detection
-- [ ] Person Detection
-- [ ] Blur Detection
-- [ ] Lighting Detection
-- [ ] Face Visibility
-- [ ] Face Distance
-- [ ] Face Orientation
-- [ ] Shirt Detection
-- [ ] Cap Detection
-- [ ] Screenshot Risk
-- [ ] Compliance Score
-- [ ] JSON Response
-- [ ] Configuration System
+- [x] Upload API
+- [x] Face Detection
+- [x] Person Detection
+- [x] Blur Detection
+- [x] Lighting Detection
+- [x] Face Visibility
+- [x] Face Distance
+- [x] Face Orientation
+- [x] Shirt Detection
+- [x] Cap Detection
+- [x] Screenshot Risk
+- [x] Compliance Score
+- [x] JSON Response
+- [x] Configuration System
+- [ ] Docker Setup
 - [ ] Documentation
-- [ ] Final Testing
 - [ ] Version 1 Release
-

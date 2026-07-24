@@ -48,7 +48,7 @@ _COLOR_MAP = {
     "Blue": ([90, 60, 0], [140, 120, 80]),
     "Orange": ([0, 100, 200], [30, 160, 255]),
     "White": ([200, 200, 200], [255, 255, 255]),
-    "Red": ([0, 0, 100], [60, 60, 200]),
+    "Red": ([0, 0, 100], [80, 80, 255]),
     "Green": ([0, 100, 0], [80, 180, 80]),
     "Yellow": ([0, 180, 180], [60, 255, 255]),
     "Brown": ([30, 50, 80], [80, 100, 150]),
@@ -88,7 +88,7 @@ def detect_uniform(image: np.ndarray) -> dict:
         dict: { detected, color, confidence, method }
     """
     rules = get_uniform_rules()
-    allowed_colors = rules.get("tshirt_colors", ["Blue", "Orange", "Black"])
+    allowed_colors = rules.get("tshirt_colors", ["Red"])
     confidence_threshold = rules.get("confidence_threshold", 70)
 
     # Ensure RGB for MediaPipe

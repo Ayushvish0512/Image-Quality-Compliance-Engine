@@ -58,13 +58,13 @@ def analyze_screenshot_risk(image: np.ndarray, image_bytes: bytes = None) -> dic
 
             if not exif_present:
                 indicators.append("No EXIF metadata found")
-                risk_score += 25
+                risk_score += 15  # Reduced from 25
             elif not has_camera_make or not has_camera_model:
                 indicators.append("Missing camera metadata (make/model)")
-                risk_score += 15
+                risk_score += 10  # Reduced from 15
         except Exception:
             indicators.append("Could not read EXIF data")
-            risk_score += 10
+            risk_score += 5  # Reduced from 10
 
     else:
         indicators.append("No EXIF data available for analysis")
@@ -86,7 +86,7 @@ def analyze_screenshot_risk(image: np.ndarray, image_bytes: bytes = None) -> dic
     is_screen_ratio = any(abs(aspect_ratio - r) < 0.05 for r in common_screen_ratios)
     if is_screen_ratio:
         indicators.append(f"Image has screen-like aspect ratio ({aspect_ratio:.2f})")
-        risk_score += 15
+        risk_score += 10  # Reduced from 15
 
     # --- 3. UI Border Detection ---
     # Screenshots often have solid-color borders at edges
@@ -112,7 +112,7 @@ def analyze_screenshot_risk(image: np.ndarray, image_bytes: bytes = None) -> dic
 
     if border_detected:
         indicators.append(f"Screen UI border(s) detected ({len(border_colors)} distinct)")
-        risk_score += 15
+        risk_score += 10  # Reduced from 15
 
     # --- 4. Pixel Duplication (checkerboard sampling) ---
     # Screenshots have less pixel variation than camera photos
@@ -121,9 +121,9 @@ def analyze_screenshot_risk(image: np.ndarray, image_bytes: bytes = None) -> dic
     total_sampled = sampled.shape[0] * sampled.shape[1]
     pixel_variety = unique_pixels / total_sampled if total_sampled > 0 else 0
 
-    if pixel_variety < 0.15:
+    if pixel_variety < 0.10:  # Reduced from 0.15 (more lenient)
         indicators.append(f"Low pixel variety ({pixel_variety:.2%}) suggesting screen capture")
-        risk_score += 15
+        risk_score += 10  # Reduced from 15
 
     # --- 5. Compression Artifact Detection ---
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -134,16 +134,17 @@ def analyze_screenshot_risk(image: np.ndarray, image_bytes: bytes = None) -> dic
     edge_std = np.std(laplacian)
 
     # Very low edge std = overly smooth (heavy compression)
-    if edge_std < 15:
+    if edge_std < 10:  # Reduced from 15 (more lenient)
         indicators.append("Heavy compression artifacts detected")
         risk_score += 10
 
     # --- 6. Overall Risk Calculation ---
     risk_score = min(risk_score, 100)
 
-    if risk_score >= 50:
+    # Increased thresholds to reduce false positives (live images less likely flagged High)
+    if risk_score >= 65:  # Increased from 50
         risk_level = "High"
-    elif risk_score >= 25:
+    elif risk_score >= 35:  # Increased from 25
         risk_level = "Medium"
     else:
         risk_level = "Low"

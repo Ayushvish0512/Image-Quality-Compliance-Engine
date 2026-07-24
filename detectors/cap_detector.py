@@ -39,11 +39,14 @@ def _detect_cap_region(image: np.ndarray, face_bbox: dict) -> np.ndarray:
 def _analyze_cap_region(region: np.ndarray, allowed_colors: list) -> dict:
     """
     Analyze the cap region for presence of headwear.
-
-    Uses edge density and color analysis to determine if something is on the head.
+    Uses multi-heuristic approach to reduce false positives.
     """
     if region.size == 0:
-        return {"detected": "Unknown", "color": "Unknown", "confidence": 0.0}
+        return {"detected": "Not Present", "color": "None", "confidence": 0.0}
+
+    h, w = region.shape[:2]
+    if h < 15 or w < 15:
+        return {"detected": "Not Present", "color": "None", "confidence": 0.0}
 
     gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
 
@@ -51,34 +54,63 @@ def _analyze_cap_region(region: np.ndarray, allowed_colors: list) -> dict:
     edges = cv2.Canny(gray, 50, 150)
     edge_density = np.sum(edges > 0) / edges.size
 
-    # A cap typically introduces edges above the face
-    # Low edge density + uniform dark region suggests no cap
-    # High edge density + distinct color suggests cap
-
     # Mean color of the region
     mean_color = cv2.mean(region)[:3]  # BGR
     brightness = np.mean(mean_color)
 
-    # Heuristic: if there's significant edge activity and/or
-    # the region has distinct color (not just skin tone), likely a cap
-    # Skin tone approximate in BGR: [100-180, 80-160, 80-160]
+    # Check color saturation - caps usually have saturated colors, natural background/hair doesn't
+    hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
+    hsv_mean = cv2.mean(hsv)[:3]
+    saturation = hsv_mean[1]
+
+    # Check for skin tone
     is_skin = (
         100 <= mean_color[0] <= 180
         and 80 <= mean_color[1] <= 160
         and 80 <= mean_color[2] <= 160
     )
 
-    if edge_density > 0.08 or (not is_skin and brightness < 150):
-        # Likely a cap present — try to match color
-        # Use mean color as rough estimate
-        color_name = _classify_color_simple(mean_color, allowed_colors)
-        confidence = round(min(edge_density * 500 + (1 - int(is_skin)) * 30, 95), 1)
+    has_saturated_color = saturation > 40
+    is_dark = brightness < 50
+    color_std = np.std(region.reshape(-1, 3), axis=0)
+    color_uniformity = np.mean(color_std) < 50
 
-        return {
-            "detected": "Present",
-            "color": color_name if color_name in allowed_colors else color_name,
-            "confidence": max(confidence, 50.0),
-        }
+    # Check for horizontal edge pattern at cap brim
+    sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    horizontal_edges = np.abs(sobel_x) > 60
+    horizontal_edge_ratio = np.sum(horizontal_edges) / horizontal_edges.size if horizontal_edges.size > 0 else 0
+
+    # Check for cap-like edge pattern: edges concentrated at top + brim line
+    mid_y = h // 2
+    top_half = edges[:mid_y, :] if mid_y > 0 else edges
+    bottom_half = edges[mid_y:, :] if mid_y < h else edges
+    top_edge_density = np.sum(top_half > 0) / top_half.size if top_half.size > 0 else 0
+    bottom_edge_density = np.sum(bottom_half > 0) / bottom_half.size if bottom_half.size > 0 else 0
+
+    has_cap_edge_pattern = top_edge_density > 0.08 and bottom_edge_density > 0.06
+
+    # Count conditions met (need 2+ to detect cap)
+    cap_conditions_met = 0
+    if edge_density > 0.12 and has_saturated_color:
+        cap_conditions_met += 1
+    if not is_skin and brightness < 80 and color_uniformity:
+        cap_conditions_met += 1
+    if has_cap_edge_pattern and horizontal_edge_ratio > 0.04:
+        cap_conditions_met += 1
+    if edge_density > 0.20 and is_dark:
+        cap_conditions_met += 1
+
+    if cap_conditions_met >= 2:
+        color_name = _classify_color_simple(mean_color, allowed_colors)
+        base_confidence = min(edge_density * 300 + (1 - int(is_skin)) * 15 + (has_saturated_color * 20), 90)
+        confidence = round(min(base_confidence + has_cap_edge_pattern * 15 + horizontal_edge_ratio * 100, 90), 1)
+
+        if confidence >= 75.0:
+            return {
+                "detected": "Present",
+                "color": color_name if color_name in allowed_colors else color_name,
+                "confidence": confidence,
+            }
 
     return {"detected": "Not Present", "color": "None", "confidence": 0.0}
 
@@ -126,7 +158,7 @@ def detect_cap(image: np.ndarray, face_bbox: dict = None) -> dict:
         dict: { detected (Present/Not Present/Unknown), color, confidence }
     """
     rules = get_cap_rules()
-    allowed_colors = rules.get("colors", ["Blue", "Black"])
+    allowed_colors = rules.get("colors", ["Red"])
 
     cap_region = _detect_cap_region(image, face_bbox)
     result = _analyze_cap_region(cap_region, allowed_colors)

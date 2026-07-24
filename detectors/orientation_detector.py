@@ -120,13 +120,13 @@ def estimate_orientation(image: np.ndarray) -> dict:
     pitch = round(float(pitch), 1)
     roll = round(float(roll), 1)
 
-    # Determine orientation label
+    # Determine orientation label (relaxed thresholds for natural head positions)
     abs_yaw = abs(yaw)
     abs_pitch = abs(pitch)
 
     if abs_yaw > 25:
         orientation = "Left" if yaw < 0 else "Right"
-    elif abs_pitch > 15:
+    elif abs_pitch > 30:
         orientation = "Down" if pitch < 0 else "Up"
     else:
         orientation = "Front"

@@ -82,6 +82,7 @@ def _detect_mask(image: np.ndarray) -> dict:
     """
     Detect mask on lower half of face region.
     Looks for a distinct covering over mouth/nose area.
+    Uses multiple heuristics to avoid false positives.
     """
     face_roi = _extract_body_region(image, "face_region")
     if face_roi.size == 0:
@@ -106,9 +107,25 @@ def _detect_mask(image: np.ndarray) -> dict:
     skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
     skin_ratio = np.sum(skin_mask > 0) / skin_mask.size
 
-    # If low skin ratio in lower face, mask is likely present
-    if skin_ratio < 0.35:
-        return {"detected": True, "confidence": round((1 - skin_ratio) * 100, 1)}
+    # Additional check: edge/texture analysis
+    # A mask creates distinct horizontal edge patterns across the lower face
+    gray_lower = cv2.cvtColor(lower_face, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray_lower, 50, 150)
+    edge_density = np.sum(edges > 0) / edges.size
+
+    # Check for horizontal edge patterns typical of mask boundaries
+    sobel_x = cv2.Sobel(gray_lower, cv2.CV_64F, 1, 0, ksize=3)
+    horizontal_edges = np.abs(sobel_x) > 50
+    horizontal_edge_ratio = np.sum(horizontal_edges) / horizontal_edges.size
+
+    # Check color uniformity - masks have more uniform color than skin
+    color_std = np.std(lower_face.reshape(-1, 3), axis=0)
+    color_uniformity = np.mean(color_std) < 40  # lower std = more uniform
+
+    # Stricter detection: require low skin ratio AND edge evidence of mask boundary
+    if skin_ratio < 0.20 and edge_density > 0.05 and horizontal_edge_ratio > 0.03 and color_uniformity:
+        confidence = round(min((1 - skin_ratio) * 60 + edge_density * 200 + horizontal_edge_ratio * 200, 90), 1)
+        return {"detected": True, "confidence": confidence}
     return {"detected": False, "confidence": 0.0}
 
 
@@ -139,7 +156,7 @@ def _detect_gloves(image: np.ndarray) -> dict:
 
     # High non-skin ratio could indicate gloves (or other objects)
     # Additional check: look for distinct glove colors (white, blue, etc.)
-    if non_skin_ratio > 0.6:
+    if non_skin_ratio > 0.75:
         # Check for common glove colors
         white_lower = np.array([0, 0, 200], dtype=np.uint8)
         white_upper = np.array([180, 30, 255], dtype=np.uint8)

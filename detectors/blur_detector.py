@@ -31,19 +31,19 @@ def detect_blur(image: np.ndarray) -> dict:
     gradient_magnitude = np.sqrt(sobel_x**2 + sobel_y**2)
     tenengrad = np.mean(gradient_magnitude)
 
-    # Normalize both scores to 0-100 range
-    # Variance of Laplacian: typical range 0-1000 for sharp images
-    # Tenengrad: typical range 0-100 for sharp images
-    norm_laplacian = min(variance_laplacian / 10.0, 100.0)
-    norm_tenengrad = min(tenengrad * 2.0, 100.0)
+    # Normalize both scores to 0-100 range (gentle normalization for real-world selfies)
+    # Variance of Laplacian: typical range 0-500 for sharp medium-res images
+    # Tenengrad: typical range 0-50 for sharp images
+    norm_laplacian = min(variance_laplacian / 5.0, 100.0)
+    norm_tenengrad = min(tenengrad * 3.0, 100.0)
 
     # Combined score (weighted average)
     blur_score = round((norm_laplacian * 0.6 + norm_tenengrad * 0.4), 1)
 
     # Classification
-    if blur_score >= 70:
+    if blur_score >= 50:
         classification = "Sharp"
-    elif blur_score >= 40:
+    elif blur_score >= 25:
         classification = "Slightly Blurry"
     else:
         classification = "Very Blurry"

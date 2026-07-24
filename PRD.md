@@ -310,11 +310,7 @@ uniform:
 
       allowed_colors:
 
-      - Blue
-
-      - Orange
-
-      - Black
+      - Red
 
       confidence: 70
 ```
@@ -340,9 +336,7 @@ cap:
 
     color:
 
-      - Blue
-
-      - Black
+      - Red
 ```
 
 Return
@@ -448,9 +442,7 @@ uniform:
 
   tshirt_colors:
 
-    - Blue
-
-    - Orange
+    - Red
 
 cap:
 
@@ -458,7 +450,7 @@ cap:
 
   colors:
 
-    - Blue
+    - Red
 
 gloves:
 
@@ -544,7 +536,7 @@ Total = 100
 
           "detected":true,
 
-          "color":"Blue",
+          "color":"Red",
 
           "confidence":92
 
@@ -554,7 +546,7 @@ Total = 100
 
           "detected":true,
 
-          "color":"Blue"
+          "color":"Red"
 
       },
 

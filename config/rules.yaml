@@ -4,16 +4,13 @@
 uniform:
   tshirt_required: true
   tshirt_colors:
-    - Blue
-    - Orange
-    - Black
+    - Red
   confidence_threshold: 70
 
 cap:
   required: true
   colors:
-    - Blue
-    - Black
+    - Red
 
 gloves:
   required: false
@@ -39,11 +36,10 @@ jacket:
   required: false
   enabled: false
 
-# Detection thresholds
-minimum_face_size: 30         # % of frame
+# Detection thresholds — fine-tuned for real-world selfies
+minimum_face_size: 5          # % of frame (lowered from 30 — normal selfies are ~5-10%)
 maximum_face_size: 70         # % of frame
-minimum_blur_score: 60        # 0-100
+minimum_blur_score: 30        # 0-100 (lowered from 60 — clear images score ~40-50)
 minimum_visibility: 75        # 0-100
 minimum_brightness: 50        # 0-100
 minimum_overall_score: 80     # Overall compliance pass threshold
-

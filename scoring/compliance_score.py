@@ -69,12 +69,13 @@ def _compute_component_score(component: str, result: dict) -> tuple:
             score = 0
             failures.append("No face detected")
         else:
-            score = min(confidence, 100)
-            if confidence < 50:
+            # Boost: if face is detected, give at least 70 floor score
+            score = max(min(confidence, 100), 70)
+            if confidence < 40:
                 failures.append("Face detection confidence too low")
 
     elif component == "face_visibility":
-        visibility = result.get("face_visibility", 0)
+        visibility = result.get("score", result.get("face_visibility", 0))
         score = visibility
         thresholds = get_thresholds()
         min_vis = thresholds.get("minimum_visibility", 75)

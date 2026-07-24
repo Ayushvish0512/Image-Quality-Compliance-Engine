@@ -74,4 +74,3 @@ datasets/
 .env.example
 error.txt
 request.json
-*.pt

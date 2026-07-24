@@ -1,166 +1,185 @@
 """
 Cap Detection Module
-Detects headwear using pre-trained MediaPipe object detection or color/heuristic fallback.
-Returns: detected (Present / Not Present / Unknown), color if detected
+Hybrid approach: YOLOv8 (best.pt) for cap detection + HSV color analysis on cropped cap region.
+Returns: detected (Present / Not Present), color if detected, confidence
 """
+
+from pathlib import Path
 
 import cv2
 import numpy as np
+from ultralytics import YOLO
 from config.loader import get_cap_rules
 
 
-def _detect_cap_region(image: np.ndarray, face_bbox: dict) -> np.ndarray:
+# ── Constants ──────────────────────────────────────────────────────────────
+CONFIDENCE_THRESHOLD = 0.5  # YOLO confidence threshold for cap detection
+
+# Path to YOLO cap detection model
+_DETECTOR_DIR = Path(__file__).resolve().parent
+_MODEL_PATH = str(_DETECTOR_DIR.parent / "models" / "best.pt")
+
+# Global model cache (load once)
+_yolo_model = None
+
+
+def _get_model():
+    """Load and cache the YOLO model."""
+    global _yolo_model
+    if _yolo_model is None:
+        _yolo_model = YOLO(_MODEL_PATH)
+    return _yolo_model
+
+
+# ── HSV Color Ranges (from Cap-detection repo) ─────────────────────────────
+_COLOR_RANGES = {
+    "Red": [
+        (np.array([0, 100, 50], dtype=np.uint8), np.array([10, 255, 255], dtype=np.uint8)),
+        (np.array([160, 100, 50], dtype=np.uint8), np.array([179, 255, 255], dtype=np.uint8))
+    ],
+    "Blue": [
+        (np.array([100, 100, 50], dtype=np.uint8), np.array([130, 255, 255], dtype=np.uint8))
+    ],
+    "Green": [
+        (np.array([40, 100, 50], dtype=np.uint8), np.array([80, 255, 255], dtype=np.uint8))
+    ],
+    "Yellow": [
+        (np.array([20, 100, 100], dtype=np.uint8), np.array([35, 255, 255], dtype=np.uint8))
+    ],
+    "Orange": [
+        (np.array([10, 100, 100], dtype=np.uint8), np.array([20, 255, 255], dtype=np.uint8))
+    ],
+    "Purple": [
+        (np.array([130, 50, 50], dtype=np.uint8), np.array([160, 255, 255], dtype=np.uint8))
+    ],
+    "Pink": [
+        (np.array([150, 50, 100], dtype=np.uint8), np.array([170, 255, 255], dtype=np.uint8))
+    ],
+    "Brown": [
+        (np.array([5, 50, 50], dtype=np.uint8), np.array([20, 200, 150], dtype=np.uint8))
+    ],
+    "White": [
+        (np.array([0, 0, 200], dtype=np.uint8), np.array([179, 30, 255], dtype=np.uint8))
+    ],
+    "Gray": [
+        (np.array([0, 0, 100], dtype=np.uint8), np.array([179, 40, 200], dtype=np.uint8))
+    ],
+    "Black": [
+        (np.array([0, 0, 0], dtype=np.uint8), np.array([179, 255, 50], dtype=np.uint8))
+    ]
+}
+
+
+def _detect_dominant_color(cropped_img: np.ndarray) -> tuple:
     """
-    Extract the region above the face where a cap would be.
-    If no face bbox, return full top portion of image.
+    Detect the dominant color from a cropped cap region using HSV analysis.
+
+    Args:
+        cropped_img: BGR numpy array of the cap region
+
+    Returns:
+        (color_name: str, confidence: float) where confidence is 0-100
     """
-    h, w = image.shape[:2]
+    if cropped_img.size == 0:
+        return "Unknown", 0.0
 
-    if face_bbox and all(k in face_bbox for k in ("xmin", "ymin", "width", "height")):
-        # Region above the face bounding box
-        face_top = int(face_bbox["ymin"] * h)
-        face_left = int(face_bbox["xmin"] * w)
-        face_width = int(face_bbox["width"] * w)
-        face_height = int(face_bbox["height"] * h)
+    hsv_img = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2HSV)
+    total_pixels = cropped_img.shape[0] * cropped_img.shape[1]
 
-        # Cap region: above the face, slightly wider, about 1/3 of face height
-        cap_top = max(0, face_top - int(face_height * 0.6))
-        cap_bottom = face_top
-        cap_left = max(0, face_left - int(face_width * 0.1))
-        cap_right = min(w, face_left + face_width + int(face_width * 0.1))
+    best_color = "Unknown"
+    best_ratio = 0.0
 
-        if cap_bottom > cap_top and cap_right > cap_left:
-            return image[cap_top:cap_bottom, cap_left:cap_right]
+    for color_name, ranges in _COLOR_RANGES.items():
+        combined_mask = np.zeros(hsv_img.shape[:2], dtype=np.uint8)
+        for lower, upper in ranges:
+            mask = cv2.inRange(hsv_img, lower, upper)
+            combined_mask = cv2.bitwise_or(combined_mask, mask)
+        color_pixels = np.count_nonzero(combined_mask)
+        ratio = color_pixels / max(total_pixels, 1)
+        if ratio > best_ratio:
+            best_ratio = ratio
+            best_color = color_name
 
-    # Fallback: top 25% of image
-    return image[:int(h * 0.25), :]
+    # Fallback: if no color matched well, use mean hue of saturated pixels
+    if best_ratio < 0.15:
+        mask_non_black = cv2.inRange(hsv_img, np.array([0, 30, 30]), np.array([179, 255, 255]))
+        if np.count_nonzero(mask_non_black) > total_pixels * 0.05:
+            mean_hue = np.mean(hsv_img[:, :, 0][mask_non_black > 0])
+            if mean_hue < 10 or mean_hue > 160:
+                best_color = "Red"
+            elif mean_hue < 25:
+                best_color = "Orange"
+            elif mean_hue < 35:
+                best_color = "Yellow"
+            elif mean_hue < 85:
+                best_color = "Green"
+            elif mean_hue < 130:
+                best_color = "Blue"
+            else:
+                best_color = "Purple"
+            best_ratio = 0.5  # moderate confidence for fallback
 
-
-def _analyze_cap_region(region: np.ndarray, allowed_colors: list) -> dict:
-    """
-    Analyze the cap region for presence of headwear.
-    Uses multi-heuristic approach to reduce false positives.
-    """
-    if region.size == 0:
-        return {"detected": "Not Present", "color": "None", "confidence": 0.0}
-
-    h, w = region.shape[:2]
-    if h < 15 or w < 15:
-        return {"detected": "Not Present", "color": "None", "confidence": 0.0}
-
-    gray = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-
-    # Edge detection to find cap boundaries
-    edges = cv2.Canny(gray, 50, 150)
-    edge_density = np.sum(edges > 0) / edges.size
-
-    # Mean color of the region
-    mean_color = cv2.mean(region)[:3]  # BGR
-    brightness = np.mean(mean_color)
-
-    # Check color saturation - caps usually have saturated colors, natural background/hair doesn't
-    hsv = cv2.cvtColor(region, cv2.COLOR_BGR2HSV)
-    hsv_mean = cv2.mean(hsv)[:3]
-    saturation = hsv_mean[1]
-
-    # Check for skin tone
-    is_skin = (
-        100 <= mean_color[0] <= 180
-        and 80 <= mean_color[1] <= 160
-        and 80 <= mean_color[2] <= 160
-    )
-
-    has_saturated_color = saturation > 40
-    is_dark = brightness < 50
-    color_std = np.std(region.reshape(-1, 3), axis=0)
-    color_uniformity = np.mean(color_std) < 50
-
-    # Check for horizontal edge pattern at cap brim
-    sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-    horizontal_edges = np.abs(sobel_x) > 60
-    horizontal_edge_ratio = np.sum(horizontal_edges) / horizontal_edges.size if horizontal_edges.size > 0 else 0
-
-    # Check for cap-like edge pattern: edges concentrated at top + brim line
-    mid_y = h // 2
-    top_half = edges[:mid_y, :] if mid_y > 0 else edges
-    bottom_half = edges[mid_y:, :] if mid_y < h else edges
-    top_edge_density = np.sum(top_half > 0) / top_half.size if top_half.size > 0 else 0
-    bottom_edge_density = np.sum(bottom_half > 0) / bottom_half.size if bottom_half.size > 0 else 0
-
-    has_cap_edge_pattern = top_edge_density > 0.08 and bottom_edge_density > 0.06
-
-    # Count conditions met (need 2+ to detect cap)
-    cap_conditions_met = 0
-    if edge_density > 0.12 and has_saturated_color:
-        cap_conditions_met += 1
-    if not is_skin and brightness < 80 and color_uniformity:
-        cap_conditions_met += 1
-    if has_cap_edge_pattern and horizontal_edge_ratio > 0.04:
-        cap_conditions_met += 1
-    if edge_density > 0.20 and is_dark:
-        cap_conditions_met += 1
-
-    if cap_conditions_met >= 2:
-        color_name = _classify_color_simple(mean_color, allowed_colors)
-        base_confidence = min(edge_density * 300 + (1 - int(is_skin)) * 15 + (has_saturated_color * 20), 90)
-        confidence = round(min(base_confidence + has_cap_edge_pattern * 15 + horizontal_edge_ratio * 100, 90), 1)
-
-        if confidence >= 75.0:
-            return {
-                "detected": "Present",
-                "color": color_name if color_name in allowed_colors else color_name,
-                "confidence": confidence,
-            }
-
-    return {"detected": "Not Present", "color": "None", "confidence": 0.0}
-
-
-def _classify_color_simple(bgr_color: tuple, allowed_colors: list) -> str:
-    """Simple color classifier for cap detection."""
-    b, g, r = map(int, bgr_color)
-
-    # Define rough color ranges (BGR)
-    ranges = {
-        "Black": (b < 60 and g < 60 and r < 60),
-        "White": (b > 180 and g > 180 and r > 180),
-        "Blue": (b > g and b > r and b > 80),
-        "Red": (r > g and r > b and r > 80),
-        "Green": (g > r and g > b and g > 80),
-        "Orange": (r > 150 and g > 80 and b < 80),
-        "Yellow": (r > 150 and g > 150 and b < 100),
-        "Brown": (b < 100 and g < 100 and r > 100 and r < 200),
-        "Grey": (abs(b - g) < 30 and abs(g - r) < 30 and b > 60 and b < 180),
-        "Navy": (b > 100 and g < 100 and r < 80 and b > g and b > r),
-    }
-
-    # First check if color matches any allowed color
-    for color_name in allowed_colors:
-        if color_name in ranges and ranges[color_name]:
-            return color_name
-
-    # Then check all colors
-    for color_name, condition in ranges.items():
-        if condition:
-            return color_name
-
-    return "Unknown"
+    # Convert ratio to 0-100 scale
+    confidence = round(best_ratio * 100, 1)
+    return best_color, confidence
 
 
 def detect_cap(image: np.ndarray, face_bbox: dict = None) -> dict:
     """
-    Detect cap in the image.
+    Detect cap in the image using YOLOv8 (best.pt) + HSV color analysis.
 
     Args:
-        image: BGR numpy array
-        face_bbox: dict from face detector with xmin, ymin, width, height (optional)
+        image: BGR numpy array (H, W, 3)
+        face_bbox: dict from face detector (kept for API compatibility, not used by YOLO)
 
     Returns:
-        dict: { detected (Present/Not Present/Unknown), color, confidence }
+        dict: {
+            "detected": "Present" or "Not Present",
+            "color": detected color name or "Unknown",
+            "confidence": detection confidence (0-100)
+        }
     """
     rules = get_cap_rules()
     allowed_colors = rules.get("colors", ["Red"])
 
-    cap_region = _detect_cap_region(image, face_bbox)
-    result = _analyze_cap_region(cap_region, allowed_colors)
+    # Load YOLO model
+    model = _get_model()
 
-    return result
+    # Run YOLO inference
+    results = model(image, verbose=False)
+
+    cap_detected = False
+    max_confidence = 0.0
+    cap_color = "Unknown"
+    color_confidence = 0.0
+
+    for result in results:
+        for box in result.boxes:
+            confidence = float(box.conf[0].item())
+            if confidence > CONFIDENCE_THRESHOLD:
+                class_id = int(box.cls[0].item())
+                if class_id == 0:  # class 0 = 'cap'
+                    cap_detected = True
+                    if confidence > max_confidence:
+                        max_confidence = confidence
+                        x1, y1, x2, y2 = box.xyxy[0].tolist()
+                        x1, y1 = max(0, int(x1)), max(0, int(y1))
+                        x2, y2 = min(image.shape[1], int(x2)), min(image.shape[0], int(y2))
+                        if x2 > x1 and y2 > y1:
+                            cropped_cap = image[y1:y2, x1:x2]
+                            cap_color, color_confidence = _detect_dominant_color(cropped_cap)
+
+    if cap_detected:
+        # Convert YOLO confidence (0-1) to percentage (0-100)
+        conf_pct = round(max_confidence * 100, 1)
+        return {
+            "detected": "Present",
+            "color": cap_color,
+            "confidence": conf_pct,
+        }
+    else:
+        return {
+            "detected": "Not Present",
+            "color": "Unknown",
+            "confidence": 0.0,
+        }

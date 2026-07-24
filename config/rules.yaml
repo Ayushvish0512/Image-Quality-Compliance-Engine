@@ -39,7 +39,7 @@ jacket:
 # Detection thresholds — fine-tuned for real-world selfies
 minimum_face_size: 5          # % of frame (lowered from 30 — normal selfies are ~5-10%)
 maximum_face_size: 70         # % of frame
-minimum_blur_score: 30        # 0-100 (lowered from 60 — clear images score ~40-50)
+minimum_blur_score: 20        # 0-100 (adjusted for real-world selfies)
 minimum_visibility: 75        # 0-100
 minimum_brightness: 50        # 0-100
 minimum_overall_score: 80     # Overall compliance pass threshold

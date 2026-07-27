@@ -15,6 +15,7 @@ Execution Order (some parallelizable, some sequential due to dependencies):
   Step 9: Accessory Detection (independent)
   Step 10: Screenshot Risk Detection (independent, uses image bytes)
   Step 11: Compliance Score (aggregates all results)
+  Step 12: Classification Pipeline (Queue — tshirt_model.pt → cap_model.pt → HSV color)
 """
 
 import json
@@ -32,6 +33,7 @@ from detectors.uniform_detector import detect_uniform
 from detectors.cap_detector import detect_cap
 from detectors.accessory_detector import detect_accessories
 from detectors.screenshot_detector import analyze_screenshot_risk
+from detectors.classification_pipeline import run_classification_pipeline
 from scoring.compliance_score import compute_compliance, DEFAULT_WEIGHTS
 
 
@@ -126,6 +128,12 @@ def run_pipeline(image: np.ndarray, image_bytes: bytes = None) -> dict:
     logger.info("Computing compliance score...")
     compliance = compute_compliance(results)
 
+    # ---- Step 12: Classification Pipeline (Queue) ----
+    # Runs tshirt_detection_model.pt + cap_detection_model.pt sequentially
+    # Returns separate values for tshirt and cap
+    logger.info("Running classification pipeline (queue)...")
+    classification_result = run_classification_pipeline(image)
+
     # ---- Build Final Response (PRD Section 11 Format) ----
     response = {
         "status": compliance["status"],
@@ -173,6 +181,26 @@ def run_pipeline(image: np.ndarray, image_bytes: bytes = None) -> dict:
         },
         "recommendations": _generate_recommendations(compliance, results),
         "score_breakdown": compliance["breakdown"],
+        "classification_pipeline": {
+            "tshirt": {
+                "detected": classification_result["tshirt"]["detected"],
+                "model_color": classification_result["tshirt"]["model_color"],
+                "model_confidence": classification_result["tshirt"]["model_confidence"],
+                "hsv_color": classification_result["tshirt"]["hsv_color"],
+                "hsv_confidence": classification_result["tshirt"]["hsv_confidence"],
+                "final_color": classification_result["tshirt"].get("final_color", classification_result["tshirt"]["hsv_color"]),
+                "final_confidence": classification_result["tshirt"].get("final_confidence", classification_result["tshirt"]["hsv_confidence"]),
+                "color_match": classification_result["tshirt"]["color_match"],
+                "allowed_colors": classification_result["tshirt"]["allowed_colors"],
+            },
+            "cap": {
+                "detected": classification_result["cap"]["detected"],
+                "model_confidence": classification_result["cap"]["model_confidence"],
+                "hsv_color": classification_result["cap"]["hsv_color"],
+                "hsv_confidence": classification_result["cap"]["hsv_confidence"],
+                "allowed_colors": classification_result["cap"]["allowed_colors"],
+            },
+        },
     }
 
     return _sanitize(response)

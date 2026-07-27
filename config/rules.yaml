@@ -5,6 +5,10 @@ uniform:
   tshirt_required: true
   tshirt_colors:
     - Red
+    - Black
+    - Blue
+    - Grey
+    - White
   confidence_threshold: 70
 
 cap:

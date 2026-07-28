@@ -4,6 +4,9 @@ Aggregates results from all detectors, applies weighted scoring,
 and determines final status: PASS / REVIEW / REJECT.
 
 Scoring weights are configurable via environment variables.
+
+Red=Pass Rule: If uniform is detected as Red, score gets boosted to minimum 90
+for that component (since we check Red via both YOLO model and HSV analysis).
 """
 
 import os
@@ -126,12 +129,16 @@ def _compute_component_score(component: str, result: dict) -> tuple:
             failures.append(f"Not facing the camera (looking {orientation})")
 
     elif component == "uniform":
-        detected = result.get("detected", False)
-        if detected:
+        detected_val = result.get("detected", False)
+        color_val = result.get("color", "Unknown")
+        if detected_val:
             score = min(result.get("confidence", 100), 100)
+            # Red uniform gets a high score boost (Red=Pass rule)
+            if color_val.lower() == "red":
+                score = max(score, 90)
         else:
             score = 0
-            failures.append(f"Uniform not detected or wrong color (detected: {result.get('color', 'Unknown')})")
+            failures.append(f"Uniform not detected or wrong color (detected: {color_val})")
 
     elif component == "cap":
         detected = result.get("detected", "Not Present")

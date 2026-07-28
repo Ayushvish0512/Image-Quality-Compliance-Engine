@@ -24,34 +24,7 @@ _MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
 _FACE_DETECTOR_MODEL = str(_MODELS_DIR / "blaze_face_short_range.tflite")
 _FACE_LANDMARKER_MODEL = str(_MODELS_DIR / "face_landmarker.task")
 
-_face_detector = None
-_face_landmarker = None
-
-
-def _get_face_detector():
-    global _face_detector
-    if _face_detector is None:
-        options = FaceDetectorOptions(
-            base_options=BaseOptions(model_asset_path=_FACE_DETECTOR_MODEL),
-            running_mode=VisionRunningMode.IMAGE,
-            min_detection_confidence=0.5,
-        )
-        _face_detector = FaceDetector.create_from_options(options)
-    return _face_detector
-
-
-def _get_face_landmarker():
-    global _face_landmarker
-    if _face_landmarker is None:
-        options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=_FACE_LANDMARKER_MODEL),
-            running_mode=VisionRunningMode.IMAGE,
-            min_face_detection_confidence=0.5,
-            num_faces=1,
-        )
-        _face_landmarker = FaceLandmarker.create_from_options(options)
-    return _face_landmarker
-
+from detectors.registry import ModelRegistry
 
 def detect_face(image: np.ndarray) -> dict:
     """
@@ -67,7 +40,7 @@ def detect_face(image: np.ndarray) -> dict:
     mp_img = mp_image(image_format=mp.ImageFormat.SRGB, data=image)
 
     # --- Step 1: Face Detection ---
-    detector = _get_face_detector()
+    detector = ModelRegistry.get_face_detector()
     detection_result = detector.detect(mp_img)
 
     if not detection_result.detections:
@@ -94,7 +67,7 @@ def detect_face(image: np.ndarray) -> dict:
     }
 
     # --- Step 2: Face Landmarks (for visibility) ---
-    landmarker = _get_face_landmarker()
+    landmarker = ModelRegistry.get_face_landmarker()
     landmark_result = landmarker.detect(mp_img)
 
     if not landmark_result.face_landmarks:

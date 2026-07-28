@@ -148,6 +148,41 @@ ERP decides
 
 PASS / REVIEW / REJECT
 
+## 6.1 Pipeline Execution Order (Optimized for Render Free Tier 300MB RAM)
+
+The pipeline runs detectors in the following order, optimized to avoid redundant model loads:
+
+```
+Step 1:  Person Detection + Face Detection (parallel)
+Step 2:  Face Visibility (from face landmarks)
+Step 3:  Face Distance (from face bbox)
+Step 4:  Face Orientation
+Step 5:  Blur Detection
+Step 6:  Lighting Detection
+Step 7:  Cap Detection → crop cap → HSV color analysis
+Step 8:  Tshirt/Uniform Detection → crop tshirt → HSV color analysis
+Step 9:  Accessory Detection
+Step 10: Screenshot Risk Detection
+Step 11: Compliance Score Calculation (with Red=Pass boost)
+```
+
+### Key Design Decisions for Memory Optimization:
+
+1. **Single cap model**: Uses `cap_detection_model.pt` only (removed redundant `best.pt`)
+2. **Single tshirt model**: Uses `tshirt_detection_model.pt` + HSV (removed MediaPipe Pose+KMeans)
+3. **Shared color analysis**: `utils/color_analysis.py` is the single source of truth for HSV color detection
+4. **Lazy model loading**: YOLO models are loaded on first use and cached globally
+5. **No duplicate detections**: Cap and tshirt are detected ONCE, not twice
+
+### Red=Pass Rule:
+
+If the tshirt is detected as **Red** (via YOLO model + HSV verification):
+- Uniform component score is boosted to minimum 90
+- Overall score gets a floor of 85 (PASS threshold)
+- If confidence >= 70%, additional 5 points are added
+- Other checks (blur, lighting, orientation, etc.) still contribute to the final score
+- This ensures Red uniform has high weightage but does NOT ignore other rules
+
 ---
 
 # 7. Functional Requirements

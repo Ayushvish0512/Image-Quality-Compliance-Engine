@@ -21,21 +21,7 @@ _DETECTOR_DIR = Path(__file__).resolve().parent
 _MODELS_DIR = _DETECTOR_DIR.parent / "models" / "mediapipe"
 _FACE_LANDMARKER_MODEL = str(_MODELS_DIR / "face_landmarker.task")
 
-_face_landmarker = None
-
-
-def _get_landmarker():
-    global _face_landmarker
-    if _face_landmarker is None:
-        options = FaceLandmarkerOptions(
-            base_options=BaseOptions(model_asset_path=_FACE_LANDMARKER_MODEL),
-            running_mode=VisionRunningMode.IMAGE,
-            min_face_detection_confidence=0.5,
-            num_faces=1,
-        )
-        _face_landmarker = FaceLandmarker.create_from_options(options)
-    return _face_landmarker
-
+from detectors.registry import ModelRegistry
 
 def estimate_orientation(image: np.ndarray) -> dict:
     """
@@ -54,7 +40,7 @@ def estimate_orientation(image: np.ndarray) -> dict:
     mp_img = mp_image(image_format=ImageFormat.SRGB, data=image)
     h, w = image.shape[:2]
 
-    landmarker = _get_landmarker()
+    landmarker = ModelRegistry.get_face_landmarker()
     result = landmarker.detect(mp_img)
 
     if not result.face_landmarks:

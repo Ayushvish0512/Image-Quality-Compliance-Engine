@@ -7,7 +7,8 @@ Reduces RAM usage on Render Free Tier by avoiding duplicate weight allocations.
 
 import logging
 from pathlib import Path
-import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 from ultralytics import YOLO
 
 logger = logging.getLogger(__name__)
@@ -21,52 +22,40 @@ class ModelRegistry:
     @classmethod
     def get_face_detector(cls):
         if "face_detector" not in cls._instances:
-            from mediapipe.tasks.vision import FaceDetector, FaceDetectorOptions
-            from mediapipe.tasks import BaseOptions
-            from mediapipe.tasks.vision import RunningMode
-            
             model_path = str(_MP_DIR / "blaze_face_short_range.tflite")
-            options = FaceDetectorOptions(
-                base_options=BaseOptions(model_asset_path=model_path),
-                running_mode=RunningMode.IMAGE,
+            options = vision.FaceDetectorOptions(
+                base_options=python.BaseOptions(model_asset_path=model_path),
+                running_mode=vision.RunningMode.IMAGE,
                 min_detection_confidence=0.5,
             )
-            cls._instances["face_detector"] = FaceDetector.create_from_options(options)
+            cls._instances["face_detector"] = vision.FaceDetector.create_from_options(options)
             logger.info("Loaded MediaPipe FaceDetector")
         return cls._instances["face_detector"]
 
     @classmethod
     def get_face_landmarker(cls):
         if "face_landmarker" not in cls._instances:
-            from mediapipe.tasks.vision import FaceLandmarker, FaceLandmarkerOptions
-            from mediapipe.tasks import BaseOptions
-            from mediapipe.tasks.vision import RunningMode
-            
             model_path = str(_MP_DIR / "face_landmarker.task")
-            options = FaceLandmarkerOptions(
-                base_options=BaseOptions(model_asset_path=model_path),
-                running_mode=RunningMode.IMAGE,
+            options = vision.FaceLandmarkerOptions(
+                base_options=python.BaseOptions(model_asset_path=model_path),
+                running_mode=vision.RunningMode.IMAGE,
                 min_face_detection_confidence=0.5,
                 num_faces=1,
             )
-            cls._instances["face_landmarker"] = FaceLandmarker.create_from_options(options)
+            cls._instances["face_landmarker"] = vision.FaceLandmarker.create_from_options(options)
             logger.info("Loaded MediaPipe FaceLandmarker")
         return cls._instances["face_landmarker"]
 
     @classmethod
     def get_pose_landmarker(cls):
         if "pose_landmarker" not in cls._instances:
-            from mediapipe.tasks.vision import PoseLandmarker, PoseLandmarkerOptions
-            from mediapipe.tasks import BaseOptions
-            from mediapipe.tasks.vision import RunningMode
-            
             model_path = str(_MP_DIR / "pose_landmarker_lite.task")
-            options = PoseLandmarkerOptions(
-                base_options=BaseOptions(model_asset_path=model_path),
-                running_mode=RunningMode.IMAGE,
+            options = vision.PoseLandmarkerOptions(
+                base_options=python.BaseOptions(model_asset_path=model_path),
+                running_mode=vision.RunningMode.IMAGE,
                 min_pose_detection_confidence=0.5,
             )
-            cls._instances["pose_landmarker"] = PoseLandmarker.create_from_options(options)
+            cls._instances["pose_landmarker"] = vision.PoseLandmarker.create_from_options(options)
             logger.info("Loaded MediaPipe PoseLandmarker")
         return cls._instances["pose_landmarker"]
 

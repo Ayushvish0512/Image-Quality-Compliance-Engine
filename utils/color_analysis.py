@@ -103,9 +103,3 @@ def detect_dominant_color(cropped_img: np.ndarray) -> tuple:
 
     confidence = round(best_ratio * 100, 1)
     return best_color, confidence
-</parameter>
-</invoke>
-</script>
-</parameter>
-</invoke>
-</script>
